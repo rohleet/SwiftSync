@@ -5,6 +5,10 @@ using namespace std;
 
 namespace fs = std::filesystem;
 
+void traverseDirectory(fs::path source) {
+
+}
+
 int main(int argc, char* argv[]) {
 
     if (argc != 3) {
@@ -22,6 +26,10 @@ int main(int argc, char* argv[]) {
             cerr<<"The given path is not a directory";
         }
         return 1;
+    }
+
+    for(const fs::directory_entry& entry : fs::directory_iterator(source)){
+        cout<<entry.path();
     }
     
     return 0;
