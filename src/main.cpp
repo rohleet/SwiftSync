@@ -6,7 +6,7 @@ using namespace std;
 namespace fs = std::filesystem;
 
 void traverseDirectory(fs::path source) {
-
+                                                
 }
 
 int main(int argc, char* argv[]) {
@@ -41,6 +41,11 @@ int main(int argc, char* argv[]) {
 
             fs::path relative_path = fs::relative(p1, source);
             fs::path target = destination / relative_path;
+
+            if(fs::directory_entry(target).is_directory()){
+                continue;
+            }
+
             fs::create_directories(target);
 
         //     fs::path directory_name;  // / entry.path().filename()
@@ -63,8 +68,20 @@ int main(int argc, char* argv[]) {
 
         fs::path relative_path = fs::relative(p1, source);
         fs::path target = destination / relative_path;
+
+
         
         if(entry.is_regular_file()){
+
+            if(fs::directory_entry(target).is_regular_file()){
+                cout<<"THe file " <<p1.filename()<<" already exists. Do you want to replace it? Y/N"<<endl;
+                char temp;
+                cin>>temp;
+                if(temp=='Y' || temp=='y'){
+                    fs::copy_file(p1, target, fs::copy_options::overwrite_existing);
+                }
+                continue;
+            }
             fs::copy_file(p1,target);
         }
 
