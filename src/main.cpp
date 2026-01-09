@@ -28,8 +28,46 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    for(const fs::directory_entry& entry : fs::directory_iterator(source)){
-        cout<<entry.path();
+    destination /= source.filename();
+
+    fs::create_directory(destination);
+
+    
+
+    for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
+        const fs::path& p1 = entry.path();
+
+        if(entry.is_directory()){
+
+            fs::path relative_path = fs::relative(p1, source);
+            fs::path target = destination / relative_path;
+            fs::create_directories(target);
+
+        //     fs::path directory_name;  // / entry.path().filename()
+
+        //     string dir_name = "";
+
+        //     fs::path temp_path = p1;
+
+        //     while(1){
+                
+        //     }
+
+        //     fs::create_directory(destination / directory_name);
+
+        }
+    }
+
+    for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
+        const fs::path& p1 = entry.path();
+
+        fs::path relative_path = fs::relative(p1, source);
+        fs::path target = destination / relative_path;
+        
+        if(entry.is_regular_file()){
+            fs::copy_file(p1,target);
+        }
+
     }
     
     return 0;
