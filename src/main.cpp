@@ -9,9 +9,7 @@ using namespace std::chrono;
 
 namespace fs = std::filesystem;
 
-void copy_single_file(fs::path p1,fs::path target,fs::copy_options c) {
-    fs::copy_file(p1,target,c);
-}
+void copy_single_file(fs::path p1,fs::path target,fs::copy_options c);
 
 int main(int argc, char* argv[]) {
 
@@ -108,4 +106,8 @@ int main(int argc, char* argv[]) {
     cout<<duration.count()/100<<endl;
     
     return 0;
+}
+
+void copy_single_file(fs::path p1,fs::path target,fs::copy_options c) {
+    fs::copy_file(p1,target,c);
 }
