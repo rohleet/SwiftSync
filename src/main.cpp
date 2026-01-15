@@ -4,6 +4,7 @@
 #include<thread>
 #include<chrono>
 #include<vector>
+#include "thread_queue.h"
 using namespace std;
 using namespace std::chrono;
 
@@ -35,7 +36,6 @@ int main(int argc, char* argv[]) {
     fs::create_directory(destination);
 
     
-
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
         const fs::path& p1 = entry.path();
 
@@ -55,7 +55,9 @@ int main(int argc, char* argv[]) {
 
     auto start_time =  high_resolution_clock::now();
 
-    vector<thread> threads;
+    // vector<thread> threads;
+
+    thread_queue t_queue;
 
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
         const fs::path p1 = entry.path();
@@ -73,19 +75,22 @@ int main(int argc, char* argv[]) {
                 cin>>temp;
                 if(temp=='Y' || temp=='y'){
                     // thread t(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
-                    threads.emplace_back(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
+                    // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
+
+                    t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::overwrite_existing));
                 }
                 continue;
             }
             // thread t(copy_single_file,p1,target,fs::copy_options::none);
-            threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
+            // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
+            t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::none));
         }
 
     }
 
-    for (auto& t : threads){
-        t.join();
-    }
+    // for (auto& t : threads){
+    //     t.join();
+    // }
 
     auto stop_time = high_resolution_clock::now();
 
