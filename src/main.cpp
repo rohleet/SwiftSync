@@ -50,18 +50,6 @@ int main(int argc, char* argv[]) {
 
             fs::create_directories(target);
 
-        //     fs::path directory_name;  // / entry.path().filename()
-
-        //     string dir_name = "";
-
-        //     fs::path temp_path = p1;
-
-        //     while(1){
-                
-        //     }
-
-        //     fs::create_directory(destination / directory_name);
-
         }
     }
 
@@ -82,7 +70,7 @@ int main(int argc, char* argv[]) {
         if(entry.is_regular_file()){
 
             if(fs::directory_entry(target).is_regular_file()){
-                cout<<"THe file " <<p1.filename()<<" already exists. Do you want to replace it? Y/N"<<endl;
+                cout<<"THe file " <<p1.filename()<<" already exists. Do you want to replace it? Y/N(Defualt:N)"<<endl;
                 char temp;
                 cin>>temp;
                 if(temp=='Y' || temp=='y'){
