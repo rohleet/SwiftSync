@@ -5,13 +5,14 @@
 #include<chrono>
 #include<vector>
 #include<mutex>
+#include<atomic>
 #include "thread_queue.h"
 using namespace std;
 using namespace std::chrono;
 
 namespace fs = std::filesystem;
 
-void copy_single_file(thread_queue& t_queue, mutex& queue_operation_semaphore,int& producer_status);
+void copy_single_file(thread_queue& t_queue, mutex& queue_operation_semaphore,atomic<bool>& producer_status);
 
 int main(int argc, char* argv[]) {
 
@@ -61,12 +62,16 @@ int main(int argc, char* argv[]) {
     thread_queue t_queue;
     mutex queue_operation_semaphore;
 
-    int producer_status = 0; //0 when it is not running 1 while currenlty running and -1 for completed.
+    atomic<bool> producer_end_status = 0; //0 when it is running 1 after the end of directory travel.
 
-    thread copy_queue(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_status));
+    thread copy_queue1(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+    thread copy_queue2(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+    thread copy_queue3(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+    thread copy_queue4(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+    thread copy_queue5(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+
 
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
-        producer_status = 1;
     
         const fs::path p1 = entry.path();
 
@@ -92,13 +97,19 @@ int main(int argc, char* argv[]) {
             }
             // thread t(copy_single_file,p1,target,fs::copy_options::none);
             // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
+            queue_operation_semaphore.lock();
             t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::none));
+            queue_operation_semaphore.unlock();
         }
     }
 
-    producer_status = -1;
+    producer_end_status = 1;
 
-    copy_queue.join();
+    copy_queue1.join();
+    copy_queue2.join();
+    copy_queue3.join();
+    copy_queue4.join();
+    copy_queue5.join();
 
     // for (auto& t : threads){
     //     t.join();
@@ -113,23 +124,19 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void copy_single_file(thread_queue& t_queue,mutex& queue_operation_semaphore,int& producer_status) {
+void copy_single_file(thread_queue& t_queue,mutex& queue_operation_semaphore,atomic<bool>& producer_end_status) {
 
     while(1){
 
-        if(producer_status==-1){
-            break;
-        }
-
         queue_operation_semaphore.lock();
-        if(t_queue.is_empty()){
+        if(t_queue.is_empty() && producer_end_status){
+            queue_operation_semaphore.unlock();
+            break;
+        } else if (t_queue.is_empty() && !producer_end_status){
             queue_operation_semaphore.unlock();
             continue;
-        }
-        queue_operation_semaphore.unlock();
-        
+        }      
 
-        queue_operation_semaphore.lock();
         file_copy file_detail = t_queue.pop_from_queue();
         queue_operation_semaphore.unlock();
 
