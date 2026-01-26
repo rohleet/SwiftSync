@@ -21,10 +21,10 @@ bool thread_queue::pop_from_queue(file_copy& out){
     std::unique_lock<std::mutex> lock(queue_operation_semaphore);
 
     cv.wait(lock, [&] {
-        return !file_queue.empty() || producer_end_status;
+        return !file_queue.empty() || close;
     });
 
-    if (file_queue.empty() && producer_end_status) {
+    if (file_queue.empty() && close) {
         return false;
     }
 
@@ -42,7 +42,9 @@ thread_queue::~thread_queue()
 }
 
 void thread_queue::shutdown() {
-    lock_guard<mutex> lock(queue_operation_semaphore);
-    producer_end_status = 1;
+    {
+        lock_guard<mutex> lock(queue_operation_semaphore);
+        close = 1;
+    }
     cv.notify_all();
 }

@@ -20,7 +20,7 @@ private:
     std::queue<file_copy> file_queue;
     std::mutex queue_operation_semaphore;
     std::condition_variable cv;
-    bool producer_end_status = 0; //0 when it is running 1 after the end of directory travel.
+    bool close = 0; //0 when it is running 1 after the end of directory travel.
 
 public:
 
