@@ -12,7 +12,7 @@ using namespace std::chrono;
 
 namespace fs = std::filesystem;
 
-void copy_single_file(thread_queue& t_queue, mutex& queue_operation_semaphore,atomic<bool>& producer_status);
+void copy_single_file(thread_queue& t_queue);
 
 int main(int argc, char* argv[]) {
 
@@ -60,15 +60,12 @@ int main(int argc, char* argv[]) {
     // vector<thread> threads;
 
     thread_queue t_queue;
-    mutex queue_operation_semaphore;
 
-    atomic<bool> producer_end_status = 0; //0 when it is running 1 after the end of directory travel.
-
-    thread copy_queue1(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
-    thread copy_queue2(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
-    thread copy_queue3(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
-    thread copy_queue4(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
-    thread copy_queue5(copy_single_file,std::ref(t_queue),std::ref(queue_operation_semaphore),std::ref(producer_end_status));
+    thread copy_queue1(copy_single_file,std::ref(t_queue));
+    thread copy_queue2(copy_single_file,std::ref(t_queue));
+    thread copy_queue3(copy_single_file,std::ref(t_queue));
+    thread copy_queue4(copy_single_file,std::ref(t_queue));
+    thread copy_queue5(copy_single_file,std::ref(t_queue));
 
 
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
@@ -89,21 +86,18 @@ int main(int argc, char* argv[]) {
                     // thread t(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
                     // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
 
-                    queue_operation_semaphore.lock();
                     t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::overwrite_existing));
-                    queue_operation_semaphore.unlock();
                 }
                 continue;
             }
             // thread t(copy_single_file,p1,target,fs::copy_options::none);
             // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
-            queue_operation_semaphore.lock();
             t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::none));
-            queue_operation_semaphore.unlock();
         }
     }
 
-    producer_end_status = 1;
+    t_queue.shutdown();
+
 
     copy_queue1.join();
     copy_queue2.join();
@@ -124,23 +118,24 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void copy_single_file(thread_queue& t_queue,mutex& queue_operation_semaphore,atomic<bool>& producer_end_status) {
+void copy_single_file(thread_queue& t_queue) {
 
-    while(1){
+    while(true) {
 
-        queue_operation_semaphore.lock();
-        if(t_queue.is_empty() && producer_end_status){
-            queue_operation_semaphore.unlock();
-            break;
-        } else if (t_queue.is_empty() && !producer_end_status){
-            queue_operation_semaphore.unlock();
-            continue;
-        }      
+        file_copy file_detail;
+        if(!t_queue.pop_from_queue(file_detail)){
+            return;
+        }
 
-        file_copy file_detail = t_queue.pop_from_queue();
-        queue_operation_semaphore.unlock();
+        // if(popped){
+        //     if(producer_end_status){
+        //         break;
+        //     } else {
+        //         continue;
+        //     }
+        // } 
 
         fs::copy_file(file_detail.source,file_detail.destination,file_detail.c);
-
     }
+    
 }
