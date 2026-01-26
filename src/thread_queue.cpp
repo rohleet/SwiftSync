@@ -8,25 +8,41 @@ file_copy::file_copy(std::filesystem::path source,std::filesystem::path destinat
     this->c=c;
 }
 
+file_copy::file_copy() {};
+
+
 void thread_queue::push_to_queue(file_copy f){
+    lock_guard<mutex> lock(queue_operation_semaphore);
     file_queue.push(f);
+    cv.notify_one();
 }
 
-file_copy thread_queue::pop_from_queue(){
-    auto val = file_queue.front();
+bool thread_queue::pop_from_queue(file_copy& out){
+    std::unique_lock<std::mutex> lock(queue_operation_semaphore);
+
+    cv.wait(lock, [&] {
+        return !file_queue.empty() || producer_end_status;
+    });
+
+    if (file_queue.empty() && producer_end_status) {
+        return false;
+    }
+
+    out = file_queue.front();
     file_queue.pop();
-    return val;
+    return true;
 }
 
 thread_queue::thread_queue()
 {
 }
 
-thread_queue::~thread_queue()
+thread_queue::~thread_queue() 
 {
 }
 
-bool thread_queue::is_empty(){
-    return file_queue.empty();
+void thread_queue::shutdown() {
+    lock_guard<mutex> lock(queue_operation_semaphore);
+    producer_end_status = 1;
+    cv.notify_all();
 }
-
