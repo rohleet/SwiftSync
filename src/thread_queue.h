@@ -6,13 +6,16 @@
 
 
 
+
 struct file_copy {
+
     std::filesystem::path source;
     std::filesystem::path destination;
     std::filesystem::copy_options c;
 
     file_copy(std::filesystem::path source,std::filesystem::path destination,std::filesystem::copy_options c);
     file_copy();
+    
 };
 
 class thread_queue
