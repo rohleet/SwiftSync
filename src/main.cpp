@@ -7,6 +7,8 @@
 #include<mutex>
 #include<atomic>
 #include "thread_queue.h"
+#include "progress_track.h"
+
 using namespace std;
 using namespace std::chrono;
 
@@ -60,6 +62,10 @@ int main(int argc, char* argv[]) {
     unsigned int workers = thread::hardware_concurrency();
     vector<thread> pool;
 
+    progress progress_obj;
+
+    thread progress_tracker_thread(track_progress,progress_obj);
+
     for(unsigned int i = 0; i<workers; i++){
         pool.emplace_back(copy_single_file,std::ref(t_queue));
     }
@@ -97,6 +103,8 @@ int main(int argc, char* argv[]) {
     for(thread& t : pool){
         t.join();
     }
+
+    progress_tracker_thread.join();
 
     // for (auto& t : threads){
     //     t.join();
