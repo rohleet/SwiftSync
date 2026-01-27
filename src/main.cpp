@@ -55,17 +55,16 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto start_time =  high_resolution_clock::now();
-
-    // vector<thread> threads;
-
     thread_queue t_queue;
 
-    thread copy_queue1(copy_single_file,std::ref(t_queue));
-    thread copy_queue2(copy_single_file,std::ref(t_queue));
-    thread copy_queue3(copy_single_file,std::ref(t_queue));
-    thread copy_queue4(copy_single_file,std::ref(t_queue));
-    thread copy_queue5(copy_single_file,std::ref(t_queue));
+    unsigned int workers = thread::hardware_concurrency();
+    vector<thread> pool;
+
+    for(unsigned int i = 0; i<workers; i++){
+        pool.emplace_back(copy_single_file,std::ref(t_queue));
+    }
+
+    auto start_time =  high_resolution_clock::now();
 
 
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
@@ -83,27 +82,21 @@ int main(int argc, char* argv[]) {
                 char temp;
                 cin>>temp;
                 if(temp=='Y' || temp=='y'){
-                    // thread t(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
-                    // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
 
                     t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::overwrite_existing));
+
                 }
                 continue;
             }
-            // thread t(copy_single_file,p1,target,fs::copy_options::none);
-            // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
             t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::none));
         }
     }
 
     t_queue.shutdown();
 
-
-    copy_queue1.join();
-    copy_queue2.join();
-    copy_queue3.join();
-    copy_queue4.join();
-    copy_queue5.join();
+    for(thread& t : pool){
+        t.join();
+    }
 
     // for (auto& t : threads){
     //     t.join();
@@ -126,14 +119,6 @@ void copy_single_file(thread_queue& t_queue) {
         if(!t_queue.pop_from_queue(file_detail)){
             return;
         }
-
-        // if(popped){
-        //     if(producer_end_status){
-        //         break;
-        //     } else {
-        //         continue;
-        //     }
-        // } 
 
         fs::copy_file(file_detail.source,file_detail.destination,file_detail.c);
     }
