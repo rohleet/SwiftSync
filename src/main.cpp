@@ -7,12 +7,14 @@
 #include<mutex>
 #include<atomic>
 #include "thread_queue.h"
+#include "progress_track.h"
+
 using namespace std;
 using namespace std::chrono;
 
 namespace fs = std::filesystem;
 
-void copy_single_file(thread_queue& t_queue);
+void copy_single_file(thread_queue& t_queue, progress& progress_obj);
 
 int main(int argc, char* argv[]) {
 
@@ -55,17 +57,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto start_time =  high_resolution_clock::now();
-
-    // vector<thread> threads;
-
     thread_queue t_queue;
 
-    thread copy_queue1(copy_single_file,std::ref(t_queue));
-    thread copy_queue2(copy_single_file,std::ref(t_queue));
-    thread copy_queue3(copy_single_file,std::ref(t_queue));
-    thread copy_queue4(copy_single_file,std::ref(t_queue));
-    thread copy_queue5(copy_single_file,std::ref(t_queue));
+    unsigned int workers = thread::hardware_concurrency();
+    vector<thread> pool;
+
+    progress progress_obj;
+
+    thread progress_tracker_thread(&progress::track_progress,&progress_obj);
+
+    for(unsigned int i = 0; i<workers; i++){
+        pool.emplace_back(copy_single_file,std::ref(t_queue), std::ref(progress_obj));
+    }
+
+    auto start_time =  high_resolution_clock::now();
 
 
     for(const fs::directory_entry& entry : fs::recursive_directory_iterator(source)){
@@ -83,27 +88,25 @@ int main(int argc, char* argv[]) {
                 char temp;
                 cin>>temp;
                 if(temp=='Y' || temp=='y'){
-                    // thread t(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
-                    // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::overwrite_existing);
 
                     t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::overwrite_existing));
+
                 }
                 continue;
             }
-            // thread t(copy_single_file,p1,target,fs::copy_options::none);
-            // threads.emplace_back(copy_single_file,p1,target,fs::copy_options::none);
             t_queue.push_to_queue(file_copy(p1,target,fs::copy_options::none));
         }
     }
 
     t_queue.shutdown();
 
+    for(thread& t : pool){
+        t.join();
+    }
 
-    copy_queue1.join();
-    copy_queue2.join();
-    copy_queue3.join();
-    copy_queue4.join();
-    copy_queue5.join();
+    progress_obj.close_progress_tracker();
+
+    progress_tracker_thread.join();
 
     // for (auto& t : threads){
     //     t.join();
@@ -118,7 +121,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void copy_single_file(thread_queue& t_queue) {
+void copy_single_file(thread_queue& t_queue, progress& progress_obj) {
 
     while(true) {
 
@@ -127,15 +130,21 @@ void copy_single_file(thread_queue& t_queue) {
             return;
         }
 
-        // if(popped){
-        //     if(producer_end_status){
-        //         break;
-        //     } else {
-        //         continue;
-        //     }
-        // } 
+        progress_obj.incrment_worker_buffer();
 
-        fs::copy_file(file_detail.source,file_detail.destination,file_detail.c);
+        if(fs::copy_file(file_detail.source,file_detail.destination,file_detail.c)){
+
+            progress_obj.increment_success_counter();
+            progress_obj.increment_byte_counter(fs::file_size(file_detail.destination));
+
+        } else {
+
+            progress_obj.increment_failed_counter();
+
+        }
+
+        progress_obj.decrement_worker_buffer();
+
     }
     
 }
