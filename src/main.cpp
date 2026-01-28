@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
     progress progress_obj;
 
-    thread progress_tracker_thread(progress_obj);
+    thread progress_tracker_thread(&progress::track_progress,&progress_obj);
 
     for(unsigned int i = 0; i<workers; i++){
         pool.emplace_back(copy_single_file,std::ref(t_queue), std::ref(progress_obj));
@@ -130,6 +130,8 @@ void copy_single_file(thread_queue& t_queue, progress& progress_obj) {
             return;
         }
 
+        progress_obj.incrment_worker_buffer();
+
         if(fs::copy_file(file_detail.source,file_detail.destination,file_detail.c)){
 
             progress_obj.increment_success_counter();
@@ -138,8 +140,10 @@ void copy_single_file(thread_queue& t_queue, progress& progress_obj) {
         } else {
 
             progress_obj.increment_failed_counter();
-            
+
         }
+
+        progress_obj.decrement_worker_buffer();
 
     }
     

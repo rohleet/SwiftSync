@@ -1,13 +1,17 @@
 #include<mutex>
 #include<atomic>
 #include<iostream>
+#include<condition_variable>
 
 class progress
 {
 
     std::atomic<int> copy_success_counter, copy_fail_counter;
     std::atomic<uintmax_t> byte_counter;
-    bool close =  false;
+    std::atomic_bool close =  false;
+
+    std::condition_variable p_cv;
+    std::mutex progress_mutex;
 
     std::atomic_int workers_number_buffer;
 
@@ -26,6 +30,12 @@ public :
     void increment_failed_counter();
 
     void incrment_worker_buffer();
+
+    void decrement_worker_buffer();
+
+    bool workers_empty();
+
+    bool close_load();
 };
 
 
