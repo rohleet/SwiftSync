@@ -8,7 +8,7 @@ void progress::track_progress() {
 
         unique_lock<mutex> lock(progress_mutex);
 
-        p_cv.wait(lock, [&] {
+        p_cv.wait_for(lock,std::chrono::milliseconds(5),[&] {
             return workers_empty() || close_load();
         });
 

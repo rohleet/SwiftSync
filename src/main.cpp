@@ -108,10 +108,6 @@ int main(int argc, char* argv[]) {
 
     progress_tracker_thread.join();
 
-    // for (auto& t : threads){
-    //     t.join();
-    // }
-
     auto stop_time = high_resolution_clock::now();
 
     auto duration = duration_cast<microseconds>(stop_time-start_time);
